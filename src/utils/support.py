@@ -72,7 +72,7 @@ class OrganizationCode(object):
 
     def __init__(self, code=None):
         """可传入code进行验证，可不传code生成可用代码证"""
-        self.logger = Logger(__name__).return_logger()
+        self.logger = Logger(__name__).get_logger()
 
         if not code:
             self.code = self.get_an_organization_code()

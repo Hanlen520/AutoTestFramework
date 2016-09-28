@@ -16,7 +16,7 @@ class HTTPClient(object):
         :param method:
         :param headers: Must be a dict. Such as headers={'Content_Type':'text/html'}
         """
-        self.logger = Logger(__name__).return_logger()
+        self.logger = Logger(__name__).get_logger()
 
         self.url = url
         self.session = requests.session()

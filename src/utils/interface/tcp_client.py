@@ -19,7 +19,7 @@ from src.utils.logger import Logger
 class TCPClient(object):
 
     def __init__(self, domain, port):
-        self.logger = Logger(__name__).return_logger()
+        self.logger = Logger(__name__).get_logger()
 
         self.domain = domain
         self.port = port

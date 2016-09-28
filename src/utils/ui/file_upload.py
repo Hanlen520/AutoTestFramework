@@ -47,7 +47,7 @@ AUTOITEXE = {'firefox': 'upfile_autoit_firefox.exe',
 class FileUpload(object):
 
     def __init__(self, driver, element, window_name=None):
-        self.logger = Logger(__name__).return_logger()
+        self.logger = Logger(__name__).get_logger()
         self.driver = driver
         self.Element = element
         self.window_open_flag = 0  # 用来标识窗口是否打开

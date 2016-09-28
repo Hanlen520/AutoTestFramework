@@ -38,7 +38,7 @@ class Email:
         :param password: 发件人密码，如果为空，则读取config.ini中的[email]/password，如果读取失败，则需手动输入密码，非必填。
         :param receiver: 收件人，如果为空，则读取config.ini中的[email]/to，多收件人用“；”隔开，非必填。
         """
-        self.logger = Logger(__name__).return_logger()
+        self.logger = Logger(__name__).get_logger()
 
         self.title = title
         self.message = message

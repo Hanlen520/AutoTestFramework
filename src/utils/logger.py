@@ -10,7 +10,7 @@ Logger -- 日志类
         __init__(logger_name='root')
             读入配置文件，进行配置。logger_name默认为root。
 
-        return_logger()
+        get_logger()
             读取配置，添加相应handler，返回logger。
 """
 import logging
@@ -38,7 +38,7 @@ class Logger(object):
 
         self.formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 
-    def return_logger(self):
+    def get_logger(self):
         """在logger中添加日志句柄并返回，如果logger已有句柄，则直接返回"""
         if not self.logger.handlers:  # 避免重复日志
             # if True, 在console中输出日志
@@ -64,7 +64,7 @@ class Logger(object):
 
 
 if __name__ == '__main__':
-    logger = Logger().return_logger()
+    logger = Logger().get_logger()
 
     logger.warning('hello world')
     logger.info('hi')

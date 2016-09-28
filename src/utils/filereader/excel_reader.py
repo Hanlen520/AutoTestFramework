@@ -74,7 +74,7 @@ class ExcelReader(object):
         :param book: work_book name.Not path.
         :param sheet: index of sheet or sheet name.
         """
-        self.logger = Logger(__name__).return_logger()
+        self.logger = Logger(self.__class__.__name__).get_logger()
         self.book_name = '{0}\\{1}'.format(DefaultConfig().data_path, book)
         self.sheet_locator = sheet
 

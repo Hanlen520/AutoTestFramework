@@ -59,7 +59,7 @@ from src.utils.logger import Logger
 class XMLReader(object):
 
     def __init__(self, xml):
-        self.logger = Logger(__name__).return_logger()
+        self.logger = Logger(self.__class__.__name__).get_logger()
         self.xml = '{0}\\{1}'.format(DefaultConfig().data_path, xml)
 
         self.tree = self._tree()
