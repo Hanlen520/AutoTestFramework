@@ -103,4 +103,8 @@ class UnSupportMethod(Error):
     pass
 
 
+class UnSupportFileType(Error):
+    """Thrown when test generator find an un support file type."""
+    pass
+
 

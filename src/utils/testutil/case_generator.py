@@ -4,27 +4,69 @@
 一个接口是一个class，每一条测试用例是一个method。
 
 """
-from src.utils.excel_reader import ExcelReader
 
-from src.utils.config import DefaultConfig
+# todo Generator
+from src.utils.filereader.excel_reader import ExcelReader
 from src.utils.filereader.xml_reader import XMLReader
+from src.utils.filereader.yaml_reader import YamlReader
+from src.utils.config import DefaultConfig, Config
 from src.utils.logger import Logger
+from src.utils.utils_exception import UnSupportFileType, NoSectionError, NoOptionError
+
 
 DATA_PATH = DefaultConfig().data_path
 
 
-class TestCaseGenerator(object):
+class Generator(object):
+    """测试生成器基本类"""
+    def __init__(self, project):
+        """
+
+        :param project: 项目名称
+        """
+        self.proj_name = project
+
+        self.conf_file = 'config_{}.ini'.format(self.proj_name)
+        self.cf = Config(self.conf_file)
+
+        self.test_file_name = 'test_{}.py'.format(self.proj_name)
+
+    import_string = "# -*- coding: utf-8 -*-\nimport unittest\nimport json\n"
+    class_string = "\nclass Test{}(unittest.TestCase):\n"
+    tab = "    "
+    setup_string = "\n    def setUp(self):\n"
+    teardown_string = "\n    def tearDown(self):\n"
+    class_setup_string = "\n    def setUpClass(cls):\n"
+    class_teardown_string = "\n    def tearDownClass(cls):\n"
+    test_method_string = "\n    def test_{}_{}(self):\n"
+
+
+class InterfaceTestCaseGenerator(Generator):
+    """测试类生成器"""
+    logger = Logger(__name__).get_logger()
 
     def __init__(self, project):
-        self.logger = Logger(__name__).return_logger()
+        """初始化生成器，传入项目名称，获取相应配置文件、数据文件、接口文件"""
+        Generator.__init__(self, project)
 
-        self.project_name = project
-        self.config_file = 'config_%s.ini' % self.project_name
-        self.interface_file = '%s.xml' % self.project_name
-        self.test_file = 'test_%s.py' % self.project_name
+        self.case_file = self.cf.get('file', 'interfaces')
+        self.case_file_type = self.case_file.split('.').pop()
 
-        self.interface_reader = XMLReader(self.interface_file)
-        self.tags = self.interface_reader.get_tags()
+        if self.case_file_type in ['yaml', 'yml']:
+            self.interface_reader = YamlReader(self.case_file)
+        elif self.case_file_type == 'xml':
+            self.interface_reader = XMLReader(self.case_file)
+        else:
+            self.logger.exception(UnSupportFileType(u'不支持的用例文件类型，请检查配置文件！'))
+
+        try:
+            self.encrypt = self.cf.get('encrypt', 'encrypt')
+        except (NoSectionError or NoOptionError):
+            self.encrypt = False
+        if self.encrypt:
+            self.private_key = self.cf.get('encrypt', 'private_key')
+            self.salt = self.cf.get('encrypt', 'salt')
+
 
     def generate(self):
         with open(self.test_file, 'wb') as test_file:
@@ -83,9 +125,9 @@ class TestCaseGenerator(object):
             class_string += setup_string + teardown_string + cases_string
         return class_string
 
-
     def get_rest_setup(self, tag):
-        setup_string = """    def setUp(self):\n        pass\n\n"""
+
+        setup_string = """    def setUp(self):\n        session = requests.session()\n\n"""
 
         return setup_string
 
@@ -115,7 +157,7 @@ class TestCaseGenerator(object):
 
 
 if __name__ == '__main__':
-    g = TestCaseGenerator('zhigou')
+    g = InterfaceTestCaseGenerator('zhigou')
     # print g.interfaces
     g.generate()
     # print g.import_string
