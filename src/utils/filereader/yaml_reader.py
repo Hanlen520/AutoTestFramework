@@ -6,8 +6,8 @@ import os
 from src.utils.config import DefaultConfig
 from src.utils.logger import Logger
 from src.utils.filereader.parsing import *
+from src.utils.testutil.tests import RestTest
 
-# todo: yaml reader
 
 DEFAULT_TIMEOUT = 10
 logger = Logger(__name__).get_logger()
@@ -36,13 +36,11 @@ class TestConfig(object):
 class TestSet(object):
     """ Encapsulates a set of tests and test configuration for them """
     tests = list()
-    benchmarks = list()
     config = TestConfig()
 
     def __init__(self):
         self.config = TestConfig()
         self.tests = list()
-        self.benchmarks = list()
 
     def __str__(self):
         return json.dumps(self, default=safe_to_json)
@@ -56,7 +54,16 @@ def read_file(path):
     return string
 
 
-def parse_testsets(base_url, test_structure, test_files=set(), working_directory=None, vars=None):
+def read_test_file(path):
+    """ Read test file at 'path' in YAML """
+    teststruct = yaml.safe_load_all(read_file(path))
+    return teststruct
+
+
+# todo 修改解析testset、config等的方法
+# todo 组织成YamlReader类
+
+def parse_testsets(base_url, test_structure, test_files=set(), vars=None):
     """ Convert a Python data structure read from validated YAML to a set of structured testsets
     The data structure is assumed to be a list of dictionaries, each of which describes:
         - a tests (test structure)
@@ -73,15 +80,11 @@ def parse_testsets(base_url, test_structure, test_files=set(), working_directory
     tests_out = list()
     test_config = TestConfig()
     testsets = list()
-    benchmarks = list()
-
-    if working_directory is None:
-        working_directory = os.path.abspath(os.getcwd())
 
     if vars and isinstance(vars, dict):
         test_config.variable_binds = vars
 
-    # returns a testconfig and collection of tests
+    # returns a testconfig and collecti on of tests
     for node in test_structure:  # Iterate through lists of test and configuration elements
         if isinstance(node, dict):  # Each config element is a miniature key-value dictionary
             node = lowercase_keys(node)
@@ -97,7 +100,7 @@ def parse_testsets(base_url, test_structure, test_files=set(), working_directory
                                 base_url, import_test_structure, test_files, vars=vars)
                             testsets.extend(import_testsets)
                 elif key == u'url':  # Simple test, just a GET to a URL
-                    mytest = Test()
+                    mytest = RestTest()
                     val = node[key]
                     assert isinstance(val, basestring)
                     mytest.url = base_url + val
@@ -105,20 +108,17 @@ def parse_testsets(base_url, test_structure, test_files=set(), working_directory
                 elif key == u'test':  # Complex test with additional parameters
                     with cd(working_directory):
                         child = node[key]
-                        mytest = Test.parse_test(base_url, child)
+                        mytest = RestTest.parse_test(base_url, child)
                         tests_out.append(mytest)
-                elif key == u'benchmark':
-                    benchmark = parse_benchmark(base_url, node[key])
-                    benchmarks.append(benchmark)
                 elif key == u'config' or key == u'configuration':
                     test_config = parse_configuration(
                         node[key], base_config=test_config)
     testset = TestSet()
     testset.tests = tests_out
     testset.config = test_config
-    testset.benchmarks = benchmarks
     testsets.append(testset)
     return testsets
+
 
 def parse_configuration(node, base_config=None):
     """ Parse input config to configuration information """
@@ -148,6 +148,26 @@ def parse_configuration(node, base_config=None):
             test_config.generators = gen_map
 
     return test_config
+
+
+def parse_headers(header_string):
+    """ Parse a header-string into individual headers
+        Implementation based on: http://stackoverflow.com/a/5955949/95122
+        Note that headers are a list of (key, value) since duplicate headers are allowed
+
+        NEW NOTE: keys & values are unicode strings, but can only contain ISO-8859-1 characters
+    """
+    # First line is request line, strip it out
+    if not header_string:
+        return list()
+    request, headers = header_string.split('\r\n', 1)
+    if not headers:
+        return list()
+
+    from email import message_from_string
+    header_msg = message_from_string(headers)
+    # Note: HTTP headers are *case-insensitive* per RFC 2616
+    return [(k.lower(), v) for k, v in header_msg.items()]
 
 
 class YamlReader(object):

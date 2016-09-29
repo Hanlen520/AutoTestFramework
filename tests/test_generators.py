@@ -2,9 +2,8 @@ import unittest
 import string
 import os
 import types
-import sys
 
-from . import generators
+from src.utils.filereader import generators
 
 
 class GeneratorTest(unittest.TestCase):
@@ -250,4 +249,4 @@ class GeneratorTest(unittest.TestCase):
         del config['type']
 
 if __name__ == '__main__':
-    unittest.main()
+    unittest.main(verbosity=2)

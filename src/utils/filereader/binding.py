@@ -3,6 +3,8 @@ import types
 from src.utils.logger import Logger
 
 """
+这个类是把变量名与变量值绑定、生成器名与生成器绑定的类，添加进来后，可以管理所有变量与生成器供test使用。
+
 Basic context implementation for binding variables to values
 """
 

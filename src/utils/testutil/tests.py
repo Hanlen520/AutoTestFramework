@@ -1,15 +1,19 @@
 # -*- coding: utf-8 -*-
 """这个模块定义Test类，类里的一些方法与属性，在yaml数据经过reader解析之后，生成可传入generator的Test类，组织并生成测试文件。"""
 
-import string
-import json
 import copy
-from src.utils.filereader.parsing import safe_to_json
+import json
+import string
+
 from src.utils.filereader.contenthandling import ContentHandler
+from src.utils.filereader.parsing import safe_to_json
 from src.utils.testutil import validators
+
+# todo 测试类基类处理、其他接口、UI测试类添加
 
 
 class Test(object):
+    """测试类基类，之后可能把一些属性、方法抽出来到基类中"""
     pass
 
 
@@ -61,7 +65,7 @@ class RestTest(Test):
     def realize_template(self, variable_name, context):
         """ Realize a templated value, using variables from context
             Returns None if no template is set for that variable """
-        val = None
+        # val = None
         if context is None or self.templates is None or variable_name not in self.templates:
             return None
         return self.templates[variable_name].safe_substitute(context.get_values())
@@ -160,7 +164,7 @@ class RestTest(Test):
         return False
 
     def realize(self, context=None):
-        """ Return a fully-templated test object, for configuring curl
+        """ Return a fully-templated test object
             Warning: this is a SHALLOW copy, mutation of fields will cause problems!
             Can accept a None context """
         if not self.is_dynamic() or context is None:
