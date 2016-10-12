@@ -108,3 +108,6 @@ class UnSupportFileType(Error):
     pass
 
 
+class EncryptError(Error):
+    """Thrown when Encrypt Error, such as sign without private key or encrypt without salt."""
+    pass
