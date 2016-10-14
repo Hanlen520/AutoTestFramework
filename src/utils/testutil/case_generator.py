@@ -6,15 +6,171 @@
 """
 
 # todo Generator
-from src.utils.filereader.excel_reader import ExcelReader
-from src.utils.filereader.xml_reader import XMLReader
-from src.utils.filereader.yaml_reader import YamlReader
+import json
+import yaml
+from src.utils.filereader.file_reader import *
 from src.utils.config import DefaultConfig, Config
 from src.utils.logger import Logger
 from src.utils.utils_exception import UnSupportFileType, NoSectionError, NoOptionError
+from src.utils.filereader.parsing import *
+from src.utils.filereader.generators import parse_generator
+from src.utils.testutil.tests import RestTest
 
 
 DATA_PATH = DefaultConfig().data_path
+
+DEFAULT_TIMEOUT = 10
+logger = Logger(__name__).get_logger()
+
+
+class TestConfig(object):
+    """ Configuration for a test run """
+    # timeout = DEFAULT_TIMEOUT  # timeout of tests, in seconds
+    print_bodies = False  # Print response bodies in all cases
+    print_headers = False  # Print response bodies in all cases
+    # retries = 0  # Retries on failures
+    # test_parallel = False  # Allow parallel execution of tests in a test set, for speed?
+    interactive = False
+    verbose = False
+    ssl_insecure = False
+    # skip_term_colors = False  # Turn off output term colors
+
+    headers = None
+    test = None
+
+    run = True
+
+    # Binding and creation of generators
+    variable_binds = None
+    generators = None  # Map of generator name to generator function
+
+    def __str__(self):
+        return json.dumps(self, default=safe_to_json)
+
+
+class TestSet(object):
+    """ Encapsulates a set of tests and test configuration for them """
+    tests = list()
+    config = TestConfig()
+
+    def __init__(self):
+        self.config = TestConfig()
+        self.tests = list()
+
+    def __str__(self):
+        return json.dumps(self, default=safe_to_json)
+
+
+def read_file(path):
+    """ Read an input into a file, doing necessary conversions around relative path handling """
+    with open(path, "r") as f:
+        string = f.read()
+        f.close()
+    return string
+
+
+def read_test_file(path):
+    """ Read test file at 'path' in YAML """
+    teststruct = yaml.safe_load_all(read_file(path))
+    return teststruct
+
+
+# todo 修改解析testset、config等的方法
+
+
+def parse_testsets(base_url, test_structure, vars=None):
+    """ Convert a Python data structure read from validated YAML to a set of structured testsets
+    The data structure is assumed to be a list of dictionaries, each of which describes:
+        - a tests (test structure)
+        - a simple test (just a URL, and a minimal test is created)
+        - or overall test configuration for this testset
+
+    This returns a list of testsets, corresponding to imported testsets and in-line multi-document sets
+    """
+
+
+    test_config = TestConfig()
+    testsets = list()
+
+    if vars and isinstance(vars, dict):
+        test_config.variable_binds = vars
+
+    # returns a testconfig and collection of tests
+    for node in test_structure:  # Iterate through lists of test and configuration elements
+        tests_out = list()
+        # print node
+        if isinstance(node, dict):  # Each config element is a miniature key-value dictionary
+            node = lowercase_keys(node)
+            for key in node:
+                if key == u'config':
+                    test_config = parse_configuration(node[key], base_config=test_config)
+                elif key == u'url':  # Simple test, just a GET to a URL
+                    mytest = RestTest()
+                    val = node[key]
+                    assert isinstance(val, basestring)
+                    mytest.url = base_url + val
+                    tests_out.append(mytest)
+                elif key == u'test':  # Complex test with additional parameters
+                    child = node[key]
+                    mytest = RestTest.parse_test(base_url, child)
+                    tests_out.append(mytest)
+        testset = TestSet()
+        testset.tests = tests_out
+        testset.config = test_config
+        testsets.append(testset)
+    return testsets
+
+
+def parse_configuration(node, base_config=None):
+    """ Parse input config to configuration information """
+    test_config = base_config
+    if not test_config:
+        test_config = TestConfig()
+
+    node = lowercase_keys(flatten_dictionaries(node))  # Make it usable
+
+    for key, value in node.items():
+        if key == u'print_bodies':
+            test_config.print_bodies = safe_to_bool(value)
+        elif key == u'variable_binds':
+            if not test_config.variable_binds:
+                test_config.variable_binds = dict()
+            test_config.variable_binds.update(flatten_dictionaries(value))
+        elif key == u'generators':
+            flat = flatten_dictionaries(value)
+            gen_map = dict()
+            for generator_name, generator_config in flat.items():
+                gen = parse_generator(generator_config)
+                gen_map[str(generator_name)] = gen
+            test_config.generators = gen_map
+        elif key == u'testset':
+            test_config.test = value
+        elif key == u'run':
+            test_config.run = safe_to_bool(value)
+        elif key == u'headers':
+            test_config.headers = safe_to_json(flatten_dictionaries(value))
+
+    return test_config
+
+
+def parse_headers(header_string):
+    """ Parse a header-string into individual headers
+        Implementation based on: http://stackoverflow.com/a/5955949/95122
+        Note that headers are a list of (key, value) since duplicate headers are allowed
+
+        NEW NOTE: keys & values are unicode strings, but can only contain ISO-8859-1 characters
+    """
+    # First line is request line, strip it out
+    if not header_string:
+        return list()
+    request, headers = header_string.split('\r\n', 1)
+    if not headers:
+        return list()
+
+    from email import message_from_string
+    header_msg = message_from_string(headers)
+    # Note: HTTP headers are *case-insensitive* per RFC 2616
+    return [(k.lower(), v) for k, v in header_msg.items()]
 
 
 class Generator(object):
@@ -66,7 +222,6 @@ class InterfaceTestCaseGenerator(Generator):
         if self.encrypt:
             self.private_key = self.cf.get('encrypt', 'private_key')
             self.salt = self.cf.get('encrypt', 'salt')
-
 
     def generate(self):
         with open(self.test_file, 'wb') as test_file:
@@ -126,15 +281,12 @@ class InterfaceTestCaseGenerator(Generator):
         return class_string
 
     def get_rest_setup(self, tag):
-
         setup_string = """    def setUp(self):\n        session = requests.session()\n\n"""
-
         return setup_string
 
     def get_rest_teardown(self, tag):
         teardown_string = """    def tearDown(self):\n        pass\n\n"""
         return teardown_string
-
 
     def get_rest_test(self, tag, num, case):
         method = self.interface_reader.get_method(tag)
@@ -142,11 +294,8 @@ class InterfaceTestCaseGenerator(Generator):
         test_string = """    def test_%s_%d(self):\n        pass\n\n""" % (tag, num)
         return test_string
 
-
-
     def get_setup(self, interface):
         pass
-
 
     def get_test(self, interface):
         pass
@@ -155,18 +304,13 @@ class InterfaceTestCaseGenerator(Generator):
         pass
 
 
-
 if __name__ == '__main__':
-    g = InterfaceTestCaseGenerator('zhigou')
+    # g = InterfaceTestCaseGenerator('zhigou')
     # print g.interfaces
-    g.generate()
+    # g.generate()
     # print g.import_string
-
-
-
-
-
-
-
-
-
+    ym = FileReader('TestCaseModel.yaml').read()
+    for i in parse_testsets('', ym.yaml):
+        print i.config
+        for j in i.tests:
+            print j

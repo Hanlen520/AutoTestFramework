@@ -142,4 +142,11 @@ if __name__ == '__main__':
     print phone.title
     print phone.data
     print phone.nums
+    row = phone.sheet.nrows
+    case_li = []
+    for i in range(row):
+        if i != 0:
+            case_li.append(phone.sheet.row_values(i))
+    print case_li
+    print len(case_li)
 
