@@ -4,6 +4,7 @@
 import copy
 import json
 import string
+import unittest
 import urlparse
 
 from src.utils.filereader.contenthandling import ContentHandler
@@ -12,11 +13,6 @@ from src.utils.testutil import validators
 from src.utils.filereader.file_reader import FileReader
 
 # todo 测试类基类处理、其他接口、UI测试类添加
-
-
-class Test(object):
-    """测试类基类，之后可能把一些属性、方法抽出来到基类中"""
-    pass
 
 
 # Parsing helper functions
@@ -55,6 +51,11 @@ def coerce_list_of_ints(val):
         return [int(x) for x in val]
     else:
         return [int(val)]
+
+
+class Test(object):
+    """测试类基类，之后可能把一些属性、方法抽出来到基类中"""
+    pass
 
 
 class RestTest(Test):
@@ -406,3 +407,5 @@ class RestTest(Test):
                 mytest.expected_status = [200, 202, 204]
             # Fallthrough default is simply [200]
         return mytest
+
+

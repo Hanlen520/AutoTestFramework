@@ -31,7 +31,7 @@ class TCPClient(object):
         if not self.flag:
             try:
                 self._sock.connect((self.domain, self.port))
-                self.logger.info('TcpClient connect to {0}:{1} success.'.format(self.domain, self.port))
+                self.logger.info('TCPClient connect to {0}:{1} success.'.format(self.domain, self.port))
                 self.flag = 1
             except socket.error as e:
                 self.logger.exception(e)
@@ -43,14 +43,14 @@ class TCPClient(object):
         if self.flag:
             try:
                 self._sock.send(send_string)
-                self.logger.info('TcpClient send "{0}" to server.'.format(send_string))
+                self.logger.info('TCPClient send "{0}" to server.'.format(send_string))
             except socket.error as e:
                 self.logger.exception(e)
 
             try:
                 # 没搞清楚 raw-unicode-escape, unicode-escape 区别
                 rec = self._sock.recv(10240).decode('raw-unicode-escape').encode('utf-8')
-                self.logger.info('TcpClient get "{0}" from server.'.format(rec))
+                self.logger.info('TCPClient get "{0}" from server.'.format(rec))
                 return rec
             except socket.error as e:
                 self.logger.exception(e)
@@ -59,7 +59,7 @@ class TCPClient(object):
         """关闭连接"""
         if self.flag:
             self._sock.close()
-            self.logger.info('TcpClient closed.')
+            self.logger.info('TCPClient closed.')
 
 
 if __name__ == '__main__':

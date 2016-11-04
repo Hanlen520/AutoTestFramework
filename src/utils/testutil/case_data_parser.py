@@ -1,10 +1,5 @@
 # -*- coding: utf-8 -*-
 
-from src.utils.encrypt import Encrypt
-from src.utils.logger import Logger
-
-logger = Logger(__name__).get_logger()
-
 
 class DataParser(object):
     """解析数据，主要用于将测试数据从数据文件中读取出来之后的处理（如按照类型转换，加密等），然后返回处理后的数据。"""
@@ -51,5 +46,6 @@ class DataParser(object):
 
 if __name__ == '__main__':
     d = [{'a': 'int', 'b': 'double', 'c': 'MD5'}, {'a': '1', 'b': '2', 'c': '1.0'}, {'a': 'a', 'b': 'b', 'c': 'c'}]
+    from src.utils.encrypt import Encrypt
     print DataParser(Encrypt()).parse(d)
 

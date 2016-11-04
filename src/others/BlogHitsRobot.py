@@ -40,16 +40,24 @@ def clk(driver, url):
 
 from selenium.webdriver.common.desired_capabilities import DesiredCapabilities
 
+
+def killphantomjs():
+    os.system('taskkill /f /im phantomjs.exe')
+
+
 def flush(browser, n):
     ua = DesiredCapabilities().IPHONE
     for i in range(n):
         if browser.lower() == 'firefox':
             driver = webdriver.Firefox()
         elif browser.lower() == 'chrome':
-            driver = webdriver.Chrome(executable_path=driver_path + 'chromedriver.exe')
+            options = webdriver.ChromeOptions()
+            options.add_argument('--disable-extensions')
+            driver = webdriver.Chrome(executable_path=driver_path + 'chromedriver.exe', chrome_options=options)
         elif browser.lower() == 'ie':
             driver = webdriver.Ie(executable_path=driver_path + 'IEDriverServer.exe')
         elif browser.lower() == 'phantomjs':
+            killphantomjs()
             driver = webdriver.PhantomJS(executable_path=driver_path + 'phantomjs.exe', desired_capabilities=ua)
         driver.get('http://m.baidu.com')
         driver.find_element_by_id('index-kw').send_keys(random.choice(KEYWORDS), Keys.ENTER)
@@ -60,23 +68,19 @@ def flush(browser, n):
         driver.close()
 
 
-def killphantomjs():
-    os.system('taskkill /f /im phantomjs.exe')
-
-
 if __name__ == '__main__':
     threads = []
-    t1 = Thread(target=flush, args=('phantomjs', 20))
+    t1 = Thread(target=flush, args=('phantomjs', 100))
     threads.append(t1)
-    t2 = Thread(target=flush, args=('phantomjs', 20))
+    t2 = Thread(target=flush, args=('phantomjs', 100))
     threads.append(t2)
-    t3 = Thread(target=flush, args=('phantomjs', 20))
-    threads.append(t3)
-    t4 = Thread(target=flush, args=('phantomjs', 20))
-    threads.append(t4)
+    # t3 = Thread(target=flush, args=('phantomjs', 20))
+    # threads.append(t3)
+    # t4 = Thread(target=flush, args=('phantomjs', 20))
+    # threads.append(t4)
 
     for t in threads:
         t.start()
         t.join()
 
-    killphantomjs()
+    # killphantomjs()

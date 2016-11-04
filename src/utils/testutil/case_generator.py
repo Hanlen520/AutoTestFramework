@@ -5,9 +5,6 @@
 
 """
 
-# todo Generator
-import json
-import yaml
 from src.utils.filereader.file_reader import *
 from src.utils.config import DefaultConfig, Config
 from src.utils.logger import Logger
@@ -15,105 +12,52 @@ from src.utils.utils_exception import UnSupportFileType, NoSectionError, NoOptio
 from src.utils.filereader.parsing import *
 from src.utils.filereader.generators import parse_generator
 from src.utils.testutil.tests import RestTest
+from src.utils.testutil.testset import TestConfig, TestSet
 
 
 DATA_PATH = DefaultConfig().data_path
-
-DEFAULT_TIMEOUT = 10
 logger = Logger(__name__).get_logger()
 
 
-class TestConfig(object):
-    """ Configuration for a test run """
-    # timeout = DEFAULT_TIMEOUT  # timeout of tests, in seconds
-    print_bodies = False  # Print response bodies in all cases
-    print_headers = False  # Print response bodies in all cases
-    # retries = 0  # Retries on failures
-    # test_parallel = False  # Allow parallel execution of tests in a test set, for speed?
-    interactive = False
-    verbose = False
-    ssl_insecure = False
-    # skip_term_colors = False  # Turn off output term colors
-
-    headers = None
-    test = None
-
-    run = True
-
-    # Binding and creation of generators
-    variable_binds = None
-    generators = None  # Map of generator name to generator function
-
-    def __str__(self):
-        return json.dumps(self, default=safe_to_json)
-
-
-class TestSet(object):
-    """ Encapsulates a set of tests and test configuration for them """
-    tests = list()
-    config = TestConfig()
-
-    def __init__(self):
-        self.config = TestConfig()
-        self.tests = list()
-
-    def __str__(self):
-        return json.dumps(self, default=safe_to_json)
-
-
-def read_file(path):
-    """ Read an input into a file, doing necessary conversions around relative path handling """
-    with open(path, "r") as f:
-        string = f.read()
-        f.close()
-    return string
-
-
-def read_test_file(path):
-    """ Read test file at 'path' in YAML """
-    teststruct = yaml.safe_load_all(read_file(path))
-    return teststruct
-
-
-# todo 修改解析testset、config等的方法
-
-
 def parse_testsets(base_url, test_structure, vars=None):
-    """ Convert a Python data structure read from validated YAML to a set of structured testsets
-    The data structure is assumed to be a list of dictionaries, each of which describes:
-        - a tests (test structure)
-        - a simple test (just a URL, and a minimal test is created)
-        - or overall test configuration for this testset
+    """ 将从YAML里读出来的Python数据结构的数据转化成一个testset列表
+    这个数据结构是一个字典的列表，其中描述：
+        - test
+        - simple test（仅仅是一个URL，是一个最小的test）
+        - config（所有test的通用配置）
 
-    This returns a list of testsets, corresponding to imported testsets and in-line multi-document sets
+    返回一个testsets的列表。
     """
-
-
-    test_config = TestConfig()
     testsets = list()
 
-    if vars and isinstance(vars, dict):
-        test_config.variable_binds = vars
+    for test_set in test_structure:
 
-    # returns a testconfig and collection of tests
-    for node in test_structure:  # Iterate through lists of test and configuration elements
+        test_config = TestConfig()
+        # tests = list()
         tests_out = list()
-        # print node
-        if isinstance(node, dict):  # Each config element is a miniature key-value dictionary
-            node = lowercase_keys(node)
-            for key in node:
-                if key == u'config':
-                    test_config = parse_configuration(node[key], base_config=test_config)
-                elif key == u'url':  # Simple test, just a GET to a URL
-                    mytest = RestTest()
-                    val = node[key]
-                    assert isinstance(val, basestring)
-                    mytest.url = base_url + val
-                    tests_out.append(mytest)
-                elif key == u'test':  # Complex test with additional parameters
-                    child = node[key]
-                    mytest = RestTest.parse_test(base_url, child)
-                    tests_out.append(mytest)
+
+        if vars and isinstance(vars, dict):
+            test_config.variable_binds = vars
+
+        for node in test_set:  # 取出每一个节点，进行解析
+
+            if isinstance(node, dict):  # 每一个节点均为一个dict
+                node = lowercase_keys(node)
+
+                for key in node:
+                    if key == 'config':
+                        # 如果是 config 标签，对其进行configuration解析
+                        test_config = parse_configuration(node[key], base_config=test_config)
+                    elif key == 'url':
+                        mytest = RestTest()
+                        val = node[key]
+                        assert isinstance(val, basestring)
+                        mytest.url = base_url + val
+                        tests_out.append(mytest)
+                    elif key == 'test':
+                        child = node[key]
+                        mytest = RestTest.parse_test(base_url, child)
+                        tests_out.append(mytest)
         testset = TestSet()
         testset.tests = tests_out
         testset.config = test_config
@@ -172,7 +116,7 @@ def parse_headers(header_string):
     # Note: HTTP headers are *case-insensitive* per RFC 2616
     return [(k.lower(), v) for k, v in header_msg.items()]
 
-
+'''
 class Generator(object):
     """测试生成器基本类"""
     def __init__(self, project):
@@ -302,15 +246,4 @@ class InterfaceTestCaseGenerator(Generator):
 
     def get_teardown(self, interface):
         pass
-
-
-if __name__ == '__main__':
-    # g = InterfaceTestCaseGenerator('zhigou')
-    # print g.interfaces
-    # g.generate()
-    # print g.import_string
-    ym = FileReader('TestCaseModel.yaml').read()
-    for i in parse_testsets('', ym.yaml):
-        print i.config
-        for j in i.tests:
-            print j
+'''
